@@ -108,6 +108,7 @@ TGAImg* menuLoad(Screen* scr){
 	TGAImg* img = loadImage(fileName);
 	if (img == NULL){
 		menuFailure("");
+		return(NULL);
 	}
 
 	return(img);
