@@ -9,7 +9,7 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 
-#include "tga.h"
+#include "ppm.h"
 #include "tPaint.h"
 #include "mainMenu.h"
 
@@ -30,7 +30,7 @@ void lumCheck(RGB* color){
 	}
 }
 
-void refreshScreen(Screen* scr, TGAImg* img){
+void refreshScreen(Screen* scr, PPMImg* img){
 	// Handle term dimensions
 	struct winsize win;
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &win);
@@ -39,9 +39,9 @@ void refreshScreen(Screen* scr, TGAImg* img){
 	char c;
 	int statusPrntd = 0;
 	int charsPrntd = 0;
-	int32_t y = scr->viewY + win.ws_row / 2;
+	int32_t y = scr->viewY - win.ws_row / 2;
 	printf("\033[H\033[2J"); // Clear terminal
-	for (int row = 0; row < win.ws_row; y--, row++){
+	for (int row = 0; row < win.ws_row; y++, row++){
 		int32_t x = scr->viewX - win.ws_col / 2;
 		for (int col = 0; col < win.ws_col; x++, col++){
 			// Print status bar
@@ -132,7 +132,7 @@ void refreshScreen(Screen* scr, TGAImg* img){
 }
 
 // Processes user input. Returns 0 when user requests quit
-int getInput(Screen* scr, TGAImg* img){
+int getInput(Screen* scr, PPMImg* img){
 	char in = getchar();
 	// Swatch switching
 	if ((in - '0') >= 1 && (in - '0') <= 9){
@@ -169,7 +169,7 @@ int getInput(Screen* scr, TGAImg* img){
 				scr->curSwatch->blue += scr->inc;
 				break;
 			// Viewport movement
-			case 'k':
+			case 'j':
 				if (scr->viewY + scr->inc < img->header.height){
 					scr->viewY += scr->inc;
 				}
@@ -177,7 +177,7 @@ int getInput(Screen* scr, TGAImg* img){
 					scr->viewY = img->header.height - 1;
 				}
 				break;
-			case 'j':
+			case 'k':
 				if (scr->viewY - scr->inc > 0){
 					scr->viewY -= scr->inc;
 				}
@@ -268,7 +268,7 @@ Screen* initScreen(){
 int main(void){
 	Screen* scr = initScreen();
 
-	TGAImg* img = mainMenu(scr);
+	PPMImg* img = mainMenu(scr);
 	if (img == NULL){
 		endScreen(scr);
 		exit(EXIT_FAILURE);

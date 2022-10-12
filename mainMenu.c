@@ -6,12 +6,9 @@
 #include <termios.h>
 #include <inttypes.h>
 
-#include "tga.h"
+#include "ppm.h"
 #include "tPaint.h"
 #include "menuStrings.h"
-
-#define UNCOMP_RGB 2 // Uncompressed RGB image type
-#define IMG_PIXEL_SIZE 24 // 24 bits for RGB. 32 bits for RGB+alpha (not implemented)
 
 // Clears screen and prints title
 void printTitle(){
@@ -53,7 +50,7 @@ void menuFailure(char* errMsg, struct termios* term){
 	getchar();
 }
 
-TGAImg* menuNewCanvas(Screen* scr){
+PPMImg* menuNewCanvas(Screen* scr){
 	char *end;
 	char buf[BUF_SIZE];
 
@@ -81,8 +78,8 @@ TGAImg* menuNewCanvas(Screen* scr){
 	}
 
 	// Attempt to make canvas
-	TGAHeader header = {0, 0, UNCOMP_RGB, 0, 0, 0, 0, 0, width, height, IMG_PIXEL_SIZE, 0};
-	TGAImg* img = makeImage(&header);
+	PPMHeader header = {"P6", width, height, 255};
+	PPMImg* img = makeImage(&header);
 	if (img == NULL){
 		menuFailure("", &termPaint);
 		return(NULL);
@@ -93,7 +90,7 @@ TGAImg* menuNewCanvas(Screen* scr){
 	printf("\033[?25l");
 	return(img);
 }
-TGAImg* menuLoad(Screen* scr){
+PPMImg* menuLoad(Screen* scr){
 	printTitle();
 	// Temp disable instant input and enable cursor
 	struct termios termPaint;
@@ -107,7 +104,7 @@ TGAImg* menuLoad(Screen* scr){
 	scanf(" %s", fileName);
 
 	// Attempt to load image
-	TGAImg* img = loadImage(fileName);
+	PPMImg* img = loadImage(fileName);
 	if (img == NULL){
 		menuFailure("", &termPaint);
 		return(NULL);
@@ -119,8 +116,8 @@ TGAImg* menuLoad(Screen* scr){
 	return(img);
 }
 
-TGAImg* mainMenu(Screen* scr){
-	TGAImg* img;
+PPMImg* mainMenu(Screen* scr){
+	PPMImg* img;
 	int pickCanvas = 0;
 
 	while(1){

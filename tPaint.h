@@ -3,7 +3,7 @@
 
 #include <termios.h>
 #include <stdint.h>
-#include "tga.h"
+#include "ppm.h"
 
 #define BUF_SIZE 255
 

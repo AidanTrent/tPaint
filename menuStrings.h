@@ -16,7 +16,7 @@
 
 #define CTRL_STR "("\
 				"\033[38;2;0;255;0m""l""\033[38;2;255;255;255m"\
-				")oad image (only 24 bit tga supported)\n"\
+				")oad image (only 24 bit PPM supported)\n"\
 				"("\
 				"\033[38;2;0;255;0m""n""\033[38;2;255;255;255m"\
 				")ew canvas\n"\
