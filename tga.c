@@ -106,7 +106,7 @@ TGAImg* loadImage(char imgName[]){
 	return(img);
 }
 
-void setPixel(TGAImg* img, RGB color, uint16_t x, uint16_t y){
+void setPixel(TGAImg* img, RGB color, uint_fast16_t x, uint16_t y){
 	uint_fast32_t index = ((y * img->header.width) + x) * 3; // Convert x and y to index for array
 	// Apply pixel change to all colors
 	memcpy(&img->imageDataField[index], &color, 3);

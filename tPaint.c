@@ -8,19 +8,12 @@
 #include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
-#include "tga.h"
 
-#define SWATCHES_NUM 9
+#include "tga.h"
+#include "tPaint.h"
+#include "mainMenu.h"
+
 #define FOREGROUND_SWAP 300 // Swap text color to white when r+g+b > than this
-typedef struct{
-	struct termios termDefault;
-	uint16_t viewY;
-	uint16_t viewX;
-	uint8_t setting; // Flag to set a pixel
-	uint8_t inc; // Value to change swatch color and view by on each input
-	RGB swatches[SWATCHES_NUM];
-	RGB* curSwatch;
-} Screen;
 
 void refreshScreen(Screen* scr, TGAImg* img){
 	// Handle term dimensions
@@ -29,7 +22,7 @@ void refreshScreen(Screen* scr, TGAImg* img){
 
 	RGB color;
 	char c;
-	int y = scr->viewY + win.ws_row / 2;
+	int32_t y = scr->viewY + win.ws_row / 2;
 	printf("\033[H\033[2J"); // Clear terminal
 	for (int row = 0; row < win.ws_row; y--, row++){
 		// Print status bar
@@ -48,14 +41,17 @@ void refreshScreen(Screen* scr, TGAImg* img){
 			}
 			printf("\033[38;2;255;255;255m"); // Foreground
 			printf("\033[48;2;0;0;0m"); // Foreground
-			printf(" R:%d G:%d B:%d ", scr->curSwatch->red, scr->curSwatch->green, scr->curSwatch->blue);
+			printf(" R:%d G:%d B:%d", scr->curSwatch->red, scr->curSwatch->green, scr->curSwatch->blue);
+			if (scr->setting == 1){
+				printf(" D");
+			}
 			if (scr->inc != 1){
-				printf("F");
+				printf(" F");
 			}
 		}
 		// Print canvas
 		else{
-			int x = scr->viewX - win.ws_col / 2;
+			int32_t x = scr->viewX - win.ws_col / 2;
 			for (int col = 0; col < win.ws_col; x++, col++){
 
 				c = ' ';
@@ -63,16 +59,15 @@ void refreshScreen(Screen* scr, TGAImg* img){
 					color = getPixel(img, x, y);
 				}
 				else{
-					color.red = 0;
-					color.blue = 0;
-					color.green = 0;
+					color.red = 20;
+					color.blue = 20;
+					color.green = 20;
 				}
 				// Center character
 				if (col == win.ws_col / 2 && row == win.ws_row / 2){
 					if (scr->setting){
 						setPixel(img, *scr->curSwatch, x, y);
 						color = *scr->curSwatch;
-						scr->setting = 0;
 					}
 					c = '@';
 				}
@@ -84,7 +79,7 @@ void refreshScreen(Screen* scr, TGAImg* img){
 	}
 }
 
-// Processes user input. Returns 0 when user requests exit
+// Processes user input. Returns 0 when user requests quit
 int getInput(Screen* scr, TGAImg* img){
 	char in = getchar();
 	// Swatch switching
@@ -144,16 +139,32 @@ int getInput(Screen* scr, TGAImg* img){
 				break;
 			// Set pixel
 			case 'd':
-				scr->setting = 1;
+				if (scr->setting == 1){
+					scr->setting = 0;
+				}
+				else{
+					scr->setting = 1;
+				}
 				break;
-			// Exiting
-			case 'x':
+			case 's':
+				saveImage("output.tga", img);
+				break;
+			// Quiting
+			case 'q':
 				return(0);
 			default:
 				break;
 		}
 	}
 	return(1);
+}
+
+void endScreen(Screen* scr){
+	tcsetattr(STDIN_FILENO, TCSANOW, &scr->termDefault);
+	// Re-enable cursor
+	printf("\033[?25h");
+	free(scr);
+	scr = NULL;
 }
 
 Screen* initScreen(){
@@ -182,23 +193,18 @@ Screen* initScreen(){
 	return scr;
 }
 
-void endScreen(Screen* scr){
-	tcsetattr(STDIN_FILENO, TCSANOW, &scr->termDefault);
-	// Re-enable cursor
-	printf("\033[?25h");
-}
 
 int main(void){
 	Screen* scr = initScreen();
 
-	TGAImg* img = loadImage("testImage2.tga");
-	if (img == NULL){
-		endScreen(scr);
-		exit(EXIT_FAILURE);
-	}
-
-	while (getInput(scr, img)){
-		refreshScreen(scr, img);
+	TGAImg* img = mainMenu(scr);
+	while (img != NULL){
+		while (getInput(scr, img)){
+			refreshScreen(scr, img);
+		}
+		free(img);
+		img = NULL;
+		TGAImg* img = mainMenu(scr);
 	}
 
 	endScreen(scr);
