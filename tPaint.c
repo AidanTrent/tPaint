@@ -61,7 +61,7 @@ void refreshScreen(Screen* scr, TGAImg* img){
 					}
 				}
 				printf("\033[38;2;255;255;255m"); // Text to white
-				printf("\033[48;2;0;0;0m"); // Background to black
+				printf("\033[48;2;%d;%d;%dm", BG_SHADE, BG_SHADE, BG_SHADE); // Background to black
 				charsPrntd = printf(" R:%d G:%d B:%d ", scr->curSwatch->red, scr->curSwatch->green, scr->curSwatch->blue);
 				col += charsPrntd;
 				x += charsPrntd;
