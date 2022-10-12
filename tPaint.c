@@ -207,7 +207,11 @@ int main(void){
 		while (getInput(scr, img)){
 			refreshScreen(scr, img);
 		}
+		// Reset screen values
 		scr->setting = 0;
+		scr->viewX = 0;
+		scr->viewY = 0;
+		// Enter menu
 		free(img);
 		img = mainMenu(scr);
 	}
