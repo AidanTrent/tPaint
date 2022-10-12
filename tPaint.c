@@ -13,7 +13,20 @@
 #include "tPaint.h"
 #include "mainMenu.h"
 
-#define FOREGROUND_SWAP 300 // Swap text color to white when r+g+b > than this
+#define LUM_R 0.2126
+#define LUM_G 0.7152
+#define LUM_B 0.0722
+#define LUM_THRESH 100
+
+// Checks if RGB color is over the luminence threshold. Changes text to black if too bright
+void lumCheck(RGB* color){
+	if (LUM_R * color->red + LUM_G * color->green + LUM_B * color->blue > LUM_THRESH){
+		printf("\033[38;2;0;0;0m"); // Text to black
+	}
+	else{
+		printf("\033[38;2;255;255;255m"); // Text to white
+	}
+}
 
 void refreshScreen(Screen* scr, TGAImg* img){
 	// Handle term dimensions
@@ -28,19 +41,17 @@ void refreshScreen(Screen* scr, TGAImg* img){
 		// Print status bar
 		if (row == win.ws_row - 1){
 			for (int i = 0; i < SWATCHES_NUM; i++){
-				printf("\033[48;2;%d;%d;%dm", scr->swatches[i].red, scr->swatches[i].green, scr->swatches[i].blue); // Background
+				printf("\033[48;2;%d;%d;%dm", scr->swatches[i].red, scr->swatches[i].green, scr->swatches[i].blue); // Background to color
 				if (&scr->swatches[i] == scr->curSwatch){
-					if (scr->curSwatch->red + scr->curSwatch->green + scr->curSwatch->blue > FOREGROUND_SWAP){
-						printf("\033[38;2;0;0;0m"); // Foreground
-					}
+					lumCheck(scr->curSwatch);
 					printf("%d", i + 1);
 				}
 				else{
 					printf(" ");
 				}
 			}
-			printf("\033[38;2;255;255;255m"); // Foreground
-			printf("\033[48;2;0;0;0m"); // Foreground
+			printf("\033[38;2;255;255;255m"); // Text to white
+			printf("\033[48;2;0;0;0m"); // Background to black
 			printf(" R:%d G:%d B:%d", scr->curSwatch->red, scr->curSwatch->green, scr->curSwatch->blue);
 			if (scr->setting == 1){
 				printf(" D");
@@ -48,6 +59,26 @@ void refreshScreen(Screen* scr, TGAImg* img){
 			if (scr->inc != 1){
 				printf(" F");
 			}
+			if (scr->saving){
+				// Temp disable instant input and enable cursor
+				struct termios termPaint;
+				tcgetattr(STDIN_FILENO, &termPaint);
+				tcsetattr(STDIN_FILENO, TCSANOW, &scr->termDefault);
+				printf("\033[?25h");
+
+				// Get file name
+				printf(" Save as : ");
+				char fileName[BUF_SIZE];
+				scanf(" %s", fileName);
+
+				saveImage(fileName, img);
+
+				// Re-enable instant user input and disable cursor
+				tcsetattr(STDIN_FILENO, TCSANOW, &termPaint);
+				printf("\033[?25l");
+				scr->saving = 0;
+			}
+
 		}
 		// Print canvas
 		else{
@@ -69,10 +100,11 @@ void refreshScreen(Screen* scr, TGAImg* img){
 						setPixel(img, *scr->curSwatch, x, y);
 						color = *scr->curSwatch;
 					}
+					lumCheck(&color);
 					c = '@';
 				}
 
-				printf("\x1b[48;2;%d;%d;%dm", color.red, color.green, color.blue); // Background
+				printf("\033[48;2;%d;%d;%dm", color.red, color.green, color.blue); // Background to color
 				printf("%c", c);
 			}
 		}
@@ -147,7 +179,7 @@ int getInput(Screen* scr, TGAImg* img){
 				}
 				break;
 			case 's':
-				saveImage("output.tga", img);
+				scr->saving = 1;
 				break;
 			// Quiting
 			case 'q':

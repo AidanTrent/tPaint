@@ -10,7 +10,6 @@
 #include "tPaint.h"
 #include "menuStrings.h"
 
-#define BUF_SIZE 255
 #define UNCOMP_RGB 2 // Uncompressed RGB image type
 #define IMG_PIXEL_SIZE 24 // 24 bits for RGB. 32 bits for RGB+alpha (not implemented)
 
