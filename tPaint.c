@@ -13,6 +13,8 @@
 #include "tPaint.h"
 #include "mainMenu.h"
 
+#define BG_SHADE 20
+
 #define LUM_R 0.2126
 #define LUM_G 0.7152
 #define LUM_B 0.0722
@@ -35,67 +37,85 @@ void refreshScreen(Screen* scr, TGAImg* img){
 
 	RGB color;
 	char c;
+	int statusPrntd = 0;
+	int charsPrntd = 0;
 	int32_t y = scr->viewY + win.ws_row / 2;
 	printf("\033[H\033[2J"); // Clear terminal
 	for (int row = 0; row < win.ws_row; y--, row++){
-		// Print status bar
-		if (row == win.ws_row - 1){
-			for (int i = 0; i < SWATCHES_NUM; i++){
-				printf("\033[48;2;%d;%d;%dm", scr->swatches[i].red, scr->swatches[i].green, scr->swatches[i].blue); // Background to color
-				if (&scr->swatches[i] == scr->curSwatch){
-					lumCheck(scr->curSwatch);
-					printf("%d", i + 1);
+		int32_t x = scr->viewX - win.ws_col / 2;
+		for (int col = 0; col < win.ws_col; x++, col++){
+			// Print status bar
+			if (row == win.ws_row - 1 && !statusPrntd){
+				for (int i = 0; i < SWATCHES_NUM; i++){
+					printf("\033[48;2;%d;%d;%dm", scr->swatches[i].red, scr->swatches[i].green, scr->swatches[i].blue); // Background to color
+					if (&scr->swatches[i] == scr->curSwatch){
+						lumCheck(scr->curSwatch);
+						charsPrntd = printf("%d", i + 1);
+						col += charsPrntd;
+						x += charsPrntd;
+					}
+					else{
+						charsPrntd = printf(" ");
+						col += charsPrntd;
+						x += charsPrntd;
+					}
 				}
-				else{
-					printf(" ");
+				printf("\033[38;2;255;255;255m"); // Text to white
+				printf("\033[48;2;0;0;0m"); // Background to black
+				charsPrntd = printf(" R:%d G:%d B:%d ", scr->curSwatch->red, scr->curSwatch->green, scr->curSwatch->blue);
+				col += charsPrntd;
+				x += charsPrntd;
+				if (scr->setting == 1){
+					charsPrntd = printf("D ");
+					col += charsPrntd;
+					x += charsPrntd;
 				}
+				if (scr->inc != 1){
+					charsPrntd = printf("F ");
+					col += charsPrntd;
+					x += charsPrntd;
+				}
+				if (scr->saving){
+					// Temp disable instant input and enable cursor
+					struct termios termPaint;
+					tcgetattr(STDIN_FILENO, &termPaint);
+					tcsetattr(STDIN_FILENO, TCSANOW, &scr->termDefault);
+					printf("\033[?25h");
+
+					// Get file name
+					printf(" Save as : ");
+					char fileName[BUF_SIZE];
+					scanf(" %s", fileName);
+
+					saveImage(fileName, img);
+
+					// Re-enable instant user input and disable cursor
+					tcsetattr(STDIN_FILENO, TCSANOW, &termPaint);
+					printf("\033[?25l");
+					scr->saving = 0;
+				}
+				statusPrntd = 1;
+				col--;
+				x--;
 			}
-			printf("\033[38;2;255;255;255m"); // Text to white
-			printf("\033[48;2;0;0;0m"); // Background to black
-			printf(" R:%d G:%d B:%d", scr->curSwatch->red, scr->curSwatch->green, scr->curSwatch->blue);
-			if (scr->setting == 1){
-				printf(" D");
-			}
-			if (scr->inc != 1){
-				printf(" F");
-			}
-			if (scr->saving){
-				// Temp disable instant input and enable cursor
-				struct termios termPaint;
-				tcgetattr(STDIN_FILENO, &termPaint);
-				tcsetattr(STDIN_FILENO, TCSANOW, &scr->termDefault);
-				printf("\033[?25h");
-
-				// Get file name
-				printf(" Save as : ");
-				char fileName[BUF_SIZE];
-				scanf(" %s", fileName);
-
-				saveImage(fileName, img);
-
-				// Re-enable instant user input and disable cursor
-				tcsetattr(STDIN_FILENO, TCSANOW, &termPaint);
-				printf("\033[?25l");
-				scr->saving = 0;
-			}
-
-		}
-		// Print canvas
-		else{
-			int32_t x = scr->viewX - win.ws_col / 2;
-			for (int col = 0; col < win.ws_col; x++, col++){
-
+			// Print canvas
+			else{
 				c = ' ';
+				// On canvas pixel
 				if (x >= 0 && x < img->header.width && y >= 0 && y < img->header.height){
 					color = getPixel(img, x, y);
 				}
 				else{
-					color.red = 20;
-					color.blue = 20;
-					color.green = 20;
+					color.red = BG_SHADE;
+					color.blue = BG_SHADE;
+					color.green = BG_SHADE;
 				}
 				// Center character
 				if (col == win.ws_col / 2 && row == win.ws_row / 2){
+					if (scr->picking){
+						*scr->curSwatch = getPixel(img, x, y);
+						scr->picking = 0;
+					}
 					if (scr->setting){
 						setPixel(img, *scr->curSwatch, x, y);
 						color = *scr->curSwatch;
@@ -190,6 +210,14 @@ int getInput(Screen* scr, TGAImg* img){
 					scr->setting = 1;
 				}
 				break;
+			case 'p':
+				if (scr->picking == 1){
+					scr->picking = 0;
+				}
+				else{
+					scr->picking = 1;
+				}
+				break;
 			case 's':
 				scr->saving = 1;
 				break;
@@ -236,7 +264,6 @@ Screen* initScreen(){
 	}
 	return scr;
 }
-
 
 int main(void){
 	Screen* scr = initScreen();

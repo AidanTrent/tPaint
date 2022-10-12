@@ -38,6 +38,8 @@
 				"to change the step size of movement or swatch changes\n"\
 				"\033[38;2;0;255;0m""d ""\033[38;2;255;255;255m"\
 				"to start changing pixels\n"\
+				"\033[38;2;0;255;0m""p ""\033[38;2;255;255;255m"\
+				"to put color from canvas onto swatch\n"\
 				"\033[38;2;0;255;0m""s ""\033[38;2;255;255;255m"\
 				"to export image\n"
 
