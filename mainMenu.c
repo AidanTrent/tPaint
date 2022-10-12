@@ -1,6 +1,7 @@
 // Aidan Trent
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <termios.h>
 #include <inttypes.h>
@@ -9,7 +10,7 @@
 #include "tPaint.h"
 #include "menuStrings.h"
 
-#define FILE_NAME_MAX 255
+#define BUF_SIZE 255
 #define UNCOMP_RGB 2 // Uncompressed RGB image type
 #define IMG_PIXEL_SIZE 24 // 24 bits for RGB. 32 bits for RGB+alpha (not implemented)
 
@@ -42,7 +43,11 @@ void printTitle(){
 	printf("\033[38;2;255;255;255m");
 }
 
-void menuFailure(char* errMsg){
+void menuFailure(char* errMsg, struct termios* term){
+	// Re-enable instant user input and disable cursor
+	tcsetattr(STDIN_FILENO, TCSANOW, term);
+	printf("\033[?25l");
+
 	fprintf(stderr, "%s", errMsg);
 	printf("Press any key to continue...");
 	getchar();
@@ -50,6 +55,9 @@ void menuFailure(char* errMsg){
 }
 
 TGAImg* menuNewCanvas(Screen* scr){
+	char *end;
+	char buf[BUF_SIZE];
+
 	printTitle();
 	// Temp disable instant input and enable cursor
 	struct termios termPaint;
@@ -59,32 +67,31 @@ TGAImg* menuNewCanvas(Screen* scr){
 
 	// Get dimensions
 	printf("Enter width : ");
-	uint16_t width;
-	scanf("%" SCNu16, &width);
-	if (width < 0 || width > UINT16_MAX - 1){
-		menuFailure("ERROR : Invalid width\n");
+	fgets(buf, BUF_SIZE, stdin);
+	unsigned long width = strtoul(buf, &end, 10);
+	if (width < 1 || width > UINT16_MAX - 1 || end == buf){
+		menuFailure("ERROR : Invalid height\n", &termPaint);
 		return(NULL);
 	}
 	printf("Enter height : ");
-	uint16_t height;
-	scanf("%" SCNu16, &height);
-	if (height < 0 || height > UINT16_MAX - 1){
-		menuFailure("ERROR : Invalid height\n");
+	fgets(buf, BUF_SIZE, stdin);
+	unsigned long height = strtoul(buf, &end, 10);
+	if (height < 1 || height > UINT16_MAX - 1 || end == buf){
+		menuFailure("ERROR : Invalid height\n", &termPaint);
+		return(NULL);
+	}
+
+	// Attempt to make canvas
+	TGAHeader header = {0, 0, UNCOMP_RGB, 0, 0, 0, 0, 0, width, height, IMG_PIXEL_SIZE, 0};
+	TGAImg* img = makeImage(&header);
+	if (img == NULL){
+		menuFailure("", &termPaint);
 		return(NULL);
 	}
 
 	// Re-enable instant user input and disable cursor
 	tcsetattr(STDIN_FILENO, TCSANOW, &termPaint);
 	printf("\033[?25l");
-
-	// Attempt to make canvas
-	TGAHeader header = {0, 0, UNCOMP_RGB, 0, 0, 0, 0, 0, width, height, IMG_PIXEL_SIZE, 0};
-	TGAImg* img = makeImage(&header);
-	if (img == NULL){
-		menuFailure("");
-		return(NULL);
-	}
-
 	return(img);
 }
 TGAImg* menuLoad(Screen* scr){
@@ -97,20 +104,19 @@ TGAImg* menuLoad(Screen* scr){
 
 	// Get file name
 	printf("Enter file name : ");
-	char fileName[FILE_NAME_MAX];
-	scanf("%s", fileName);
-
-	// Re-enable instant user input and disable cursor
-	tcsetattr(STDIN_FILENO, TCSANOW, &termPaint);
-	printf("\033[?25l");
+	char fileName[BUF_SIZE];
+	scanf(" %s", fileName);
 
 	// Attempt to load image
 	TGAImg* img = loadImage(fileName);
 	if (img == NULL){
-		menuFailure("");
+		menuFailure("", &termPaint);
 		return(NULL);
 	}
 
+	// Re-enable instant user input and disable cursor
+	tcsetattr(STDIN_FILENO, TCSANOW, &termPaint);
+	printf("\033[?25l");
 	return(img);
 }
 

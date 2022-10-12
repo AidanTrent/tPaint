@@ -198,13 +198,18 @@ int main(void){
 	Screen* scr = initScreen();
 
 	TGAImg* img = mainMenu(scr);
+	if (img == NULL){
+		endScreen(scr);
+		exit(EXIT_FAILURE);
+	}
 	while (img != NULL){
+		refreshScreen(scr, img);
 		while (getInput(scr, img)){
 			refreshScreen(scr, img);
 		}
+		scr->setting = 0;
 		free(img);
-		img = NULL;
-		TGAImg* img = mainMenu(scr);
+		img = mainMenu(scr);
 	}
 
 	endScreen(scr);
