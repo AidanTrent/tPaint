@@ -150,23 +150,35 @@ int getInput(Screen* scr, TGAImg* img){
 				break;
 			// Viewport movement
 			case 'k':
-				if (scr->viewY < img->header.height - 1){
-					scr->viewY += 1;
+				if (scr->viewY + scr->inc < img->header.height){
+					scr->viewY += scr->inc;
+				}
+				else {
+					scr->viewY = img->header.height - 1;
 				}
 				break;
 			case 'j':
-				if (scr->viewY > 0){
-					scr->viewY -= 1;
+				if (scr->viewY - scr->inc > 0){
+					scr->viewY -= scr->inc;
+				}
+				else {
+					scr->viewY = 0;
 				}
 				break;
 			case 'l':
-				if (scr->viewX < img->header.width - 1){
-					scr->viewX += 1;
+				if (scr->viewX + scr->inc < img->header.width){
+					scr->viewX += scr->inc;
+				}
+				else {
+					scr->viewX = img->header.width - 1;
 				}
 				break;
 			case 'h':
-				if (scr->viewX > 0){
-					scr->viewX -= 1;
+				if (scr->viewX - scr->inc > 0){
+					scr->viewX -= scr->inc;
+				}
+				else {
+					scr->viewX = 0;
 				}
 				break;
 			// Set pixel
