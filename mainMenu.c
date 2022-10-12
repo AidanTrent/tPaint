@@ -124,6 +124,7 @@ TGAImg* mainMenu(Screen* scr){
 	int pickCanvas = 0;
 
 	while(1){
+		printf("\033[48;2;0;0;0m"); // Background to black
 		printTitle();
 		printf(CTRL_STR);
 
