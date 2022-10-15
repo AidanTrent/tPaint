@@ -1,7 +1,5 @@
 /* Aidan Trent
- * An implementation of 24 bit TARGA image (create, manipulate pixels, and export)
- * Put together with a elementary understanding of C
- * Made with info from https://www.gamers.org/dengine/quake3/TGA.txt
+ * An implementation of 24 bit PPM images
  */
 #include <stdio.h>
 #include <stdlib.h>
