@@ -15,7 +15,7 @@ typedef struct{
 	uint8_t saving;
 	uint8_t picking;
 	uint8_t setting; // Flag to set a pixel
-	uint8_t inc; // Value to change swatch color and view by on each input
+	uint8_t step; // Value to change swatch color and view by on each input
 	RGB swatches[SWATCHES_NUM];
 	RGB* curSwatch;
 } Screen;

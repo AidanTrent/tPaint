@@ -46,6 +46,7 @@ void refreshScreen(Screen* scr, PPMImg* img){
 		for (int col = 0; col < win.ws_col; x++, col++){
 			// Print status bar
 			if (row == win.ws_row - 1 && !statusPrntd){
+				// Display swatches
 				for (int i = 0; i < SWATCHES_NUM; i++){
 					printf("\033[48;2;%d;%d;%dm", scr->swatches[i].red, scr->swatches[i].green, scr->swatches[i].blue); // Background to color
 					if (&scr->swatches[i] == scr->curSwatch){
@@ -60,21 +61,23 @@ void refreshScreen(Screen* scr, PPMImg* img){
 						x += charsPrntd;
 					}
 				}
+				// Display RGB values of current swatch
 				printf("\033[38;2;255;255;255m"); // Text to white
 				printf("\033[48;2;%d;%d;%dm", BG_SHADE, BG_SHADE, BG_SHADE); // Background to black
 				charsPrntd = printf(" R:%d G:%d B:%d ", scr->curSwatch->red, scr->curSwatch->green, scr->curSwatch->blue);
 				col += charsPrntd;
 				x += charsPrntd;
+				// Display brush down/up status
 				if (scr->setting == 1){
 					charsPrntd = printf("D ");
 					col += charsPrntd;
 					x += charsPrntd;
 				}
-				if (scr->inc != 1){
-					charsPrntd = printf("F ");
-					col += charsPrntd;
-					x += charsPrntd;
-				}
+				// Display step value
+				charsPrntd = printf("+%d ", scr->step);
+				col += charsPrntd;
+				x += charsPrntd;
+				// Display saving (when saving)
 				if (scr->saving){
 					// Temp disable instant input and enable cursor
 					struct termios termPaint;
@@ -116,14 +119,9 @@ void refreshScreen(Screen* scr, PPMImg* img){
 						*scr->curSwatch = getPixel(img, x, y);
 						scr->picking = 0;
 					}
-					if (scr->setting){
-						setPixel(img, *scr->curSwatch, x, y);
-						color = *scr->curSwatch;
-					}
 					lumCheck(&color);
 					c = '@';
 				}
-
 				printf("\033[48;2;%d;%d;%dm", color.red, color.green, color.blue); // Background to color
 				printf("%c", c);
 			}
@@ -139,75 +137,100 @@ int getInput(Screen* scr, PPMImg* img){
 		scr->curSwatch = &scr->swatches[(in - '0') - 1];
 	}
 	else{
+		uint16_t lastPos;
+
 		switch (in){
 			// Change increment
-			case 'f':
-				if (scr->inc == 1){
-					scr->inc = 5;
-				}
-				else{
-					scr->inc = 1;
-				}
+			case '+':
+				scr->step += 1;
+				break;
+			case '-':
+				scr->step -= 1;
 				break;
 			// Swatch color change
 			case 'r':
-				scr->curSwatch->red -= scr->inc;
+				scr->curSwatch->red -= scr->step;
 				break;
 			case 'R':
-				scr->curSwatch->red += scr->inc;
+				scr->curSwatch->red += scr->step;
 				break;
 			case 'g':
-				scr->curSwatch->green -= scr->inc;
+				scr->curSwatch->green -= scr->step;
 				break;
 			case 'G':
-				scr->curSwatch->green += scr->inc;
+				scr->curSwatch->green += scr->step;
 				break;
 			case 'b':
-				scr->curSwatch->blue -= scr->inc;
+				scr->curSwatch->blue -= scr->step;
 				break;
 			case 'B':
-				scr->curSwatch->blue += scr->inc;
+				scr->curSwatch->blue += scr->step;
 				break;
 			// Viewport movement
 			case 'j':
-				if (scr->viewY + scr->inc < img->header.height){
-					scr->viewY += scr->inc;
+				lastPos = scr->viewY;
+				if (scr->viewY + scr->step < img->header.height){
+					scr->viewY += scr->step;
 				}
 				else {
 					scr->viewY = img->header.height - 1;
 				}
+				if (scr->setting){
+					for (int i = lastPos; i <= scr->viewY; i++){
+						setPixel(img, *scr->curSwatch, scr->viewX, i);
+					}
+				}
 				break;
 			case 'k':
-				if (scr->viewY - scr->inc > 0){
-					scr->viewY -= scr->inc;
+				lastPos = scr->viewY;
+				if (scr->viewY - scr->step > 0){
+					scr->viewY -= scr->step;
 				}
 				else {
 					scr->viewY = 0;
 				}
+				if (scr->setting){
+					for (int i = lastPos; i >= scr->viewY; i--){
+						setPixel(img, *scr->curSwatch, scr->viewX, i);
+					}
+				}
 				break;
 			case 'l':
-				if (scr->viewX + scr->inc < img->header.width){
-					scr->viewX += scr->inc;
+				lastPos = scr->viewX;
+				if (scr->viewX + scr->step < img->header.width){
+					scr->viewX += scr->step;
 				}
 				else {
 					scr->viewX = img->header.width - 1;
 				}
+				if (scr->setting){
+					for (int i = lastPos; i <= scr->viewX; i++){
+						setPixel(img, *scr->curSwatch, i, scr->viewY);
+					}
+				}
 				break;
 			case 'h':
-				if (scr->viewX - scr->inc > 0){
-					scr->viewX -= scr->inc;
+				lastPos = scr->viewX;
+				if (scr->viewX - scr->step > 0){
+					scr->viewX -= scr->step;
 				}
 				else {
 					scr->viewX = 0;
 				}
+				if (scr->setting){
+					for (int i = lastPos; i >= scr->viewX; i--){
+						setPixel(img, *scr->curSwatch, i, scr->viewY);
+					}
+				}
 				break;
-			// Set pixel
+			// Painting tools
 			case 'd':
 				if (scr->setting == 1){
 					scr->setting = 0;
 				}
 				else{
 					scr->setting = 1;
+					setPixel(img, *scr->curSwatch, scr->viewX, scr->viewY);
 				}
 				break;
 			case 'p':
@@ -252,8 +275,8 @@ Screen* initScreen(){
 	// Hide cursor
 	printf("\033[?25l");
 
-	// Set increment
-	scr->inc = 1;
+	// Set step
+	scr->step = 1;
 
 	// Initialize swatches
 	scr->curSwatch = scr->swatches;
